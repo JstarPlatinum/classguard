@@ -19,6 +19,8 @@ build/
 *.pkl
 # C extensions
 *.so
+sdkconfig
+sdkconfig.old
 
 # Distribution / packaging
 .Python
