@@ -2,7 +2,21 @@
 __pycache__/
 *.py[codz]
 *$py.class
-
+*.pyc
+.venv/
+venv/
+.env
+dist/
+build/
+*.exe
+*.zip
+*.rar
+*.7z
+*.pt
+*.pth
+*.onnx
+*.h5
+*.pkl
 # C extensions
 *.so
 
