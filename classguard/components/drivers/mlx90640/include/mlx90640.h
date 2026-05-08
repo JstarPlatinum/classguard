@@ -5,6 +5,7 @@
 #include "driver/i2c.h"
 #include "esp_err.h"
 #include "freertos/FreeRTOS.h"
+#include "MLX90640_API.h"
 #include "data_types.h"
 
 #ifdef __cplusplus
@@ -15,6 +16,8 @@ typedef struct {
     i2c_port_t port;
     uint8_t address;
     cg_driver_state_t state;
+    paramsMLX90640 params;
+    bool params_valid;
 } cg_mlx90640_t;
 
 esp_err_t cg_mlx90640_init(cg_mlx90640_t *dev, i2c_port_t port);
@@ -24,6 +27,7 @@ esp_err_t cg_mlx90640_read_words(cg_mlx90640_t *dev, uint16_t start_reg, uint16_
 esp_err_t cg_mlx90640_read_eeprom(cg_mlx90640_t *dev, uint16_t *eeprom_words, size_t word_count);
 esp_err_t cg_mlx90640_read_frame_raw(cg_mlx90640_t *dev, uint16_t *frame_words, size_t word_count);
 esp_err_t cg_mlx90640_calculate_temperatures(const uint16_t *eeprom_words, const uint16_t *frame_words, thermal_frame_t *frame);
+esp_err_t cg_mlx90640_read_thermal_frame(cg_mlx90640_t *dev, thermal_frame_t *frame);
 
 #ifdef __cplusplus
 }

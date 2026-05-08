@@ -2,6 +2,8 @@ idf_component_register(
     SRCS
         "i2c_bus/i2c_bus.c"
         "mlx90640/mlx90640.c"
+        "mlx90640/MLX90640_API.c"
+        "mlx90640/MLX90640_I2C_Driver.c"
         "scd41/scd41.c"
         "sht35/sht35.c"
         "pms5003/pms5003.c"
