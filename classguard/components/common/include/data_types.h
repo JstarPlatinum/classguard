@@ -17,6 +17,11 @@ typedef enum {
     CG_DRIVER_STATE_UNSUPPORTED,
 } cg_driver_state_t;
 
+/*
+ * Environment data keeps SCD41 and SHT35 temperature/humidity readings in
+ * separate fields. Do not reuse one sensor's temperature/humidity as the
+ * other sensor's calibrated output.
+ */
 typedef struct {
     uint32_t timestamp_ms;
     float pixels[CG_MLX90640_PIXEL_COUNT];
@@ -28,10 +33,13 @@ typedef struct {
 } thermal_frame_t;
 
 typedef struct {
-    uint32_t timestamp_ms;
-    uint16_t co2_ppm;
-    float temperature_c;
-    float humidity_rh;
+    uint32_t scd41_timestamp_ms;
+    uint16_t scd41_co2_ppm;
+    float scd41_temperature_c;
+    float scd41_humidity_rh;
+    uint32_t sht35_timestamp_ms;
+    float sht35_temperature_c;
+    float sht35_humidity_rh;
     bool scd41_valid;
     bool sht35_valid;
 } environment_frame_t;

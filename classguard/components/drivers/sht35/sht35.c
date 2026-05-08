@@ -1,7 +1,12 @@
+/*
+ * SHT35 driver v1 data interface:
+ *   Call cg_sht35_read_single_shot(...) to receive the final SHT35 output in
+ *   environment_frame_t: sht35_timestamp_ms, sht35_temperature_c,
+ *   sht35_humidity_rh, sht35_valid.
+ */
 #include "sht35.h"
 
 #include "app_config.h"
-#include "esp_check.h"
 #include "esp_timer.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -9,8 +14,6 @@
 #include "pin_map.h"
 
 #define SHT35_CMD_SINGLE_HIGH_REPEATABILITY 0x2400U
-
-static const char *TAG = "cg_sht35";
 
 static uint16_t read_be16(const uint8_t *bytes)
 {
@@ -35,6 +38,11 @@ static esp_err_t sht35_write_command(cg_sht35_t *dev, uint16_t command)
     return cg_i2c_write(dev->port, dev->address, bytes, sizeof(bytes), pdMS_TO_TICKS(CG_I2C_TIMEOUT_MS));
 }
 
+const char *cg_sht35_driver_version(void)
+{
+    return CG_SHT35_DRIVER_VERSION_STRING;
+}
+
 esp_err_t cg_sht35_init(cg_sht35_t *dev, i2c_port_t port, uint8_t address)
 {
     if (dev == NULL) {
@@ -45,8 +53,16 @@ esp_err_t cg_sht35_init(cg_sht35_t *dev, i2c_port_t port, uint8_t address)
     dev->address = (address == 0) ? CG_ADDR_SHT35_A : address;
     dev->state = CG_DRIVER_STATE_UNINITIALIZED;
 
-    ESP_RETURN_ON_ERROR(cg_i2c_bus_init_env(), TAG, "env i2c init failed");
-    ESP_RETURN_ON_ERROR(cg_sht35_probe(dev), TAG, "sht35 probe failed");
+    esp_err_t ret = cg_i2c_bus_init_env();
+    if (ret != ESP_OK) {
+        return ret;
+    }
+
+    ret = cg_sht35_probe(dev);
+    if (ret != ESP_OK) {
+        return ret;
+    }
+
     dev->state = CG_DRIVER_STATE_READY;
     return ESP_OK;
 }
@@ -66,9 +82,16 @@ esp_err_t cg_sht35_read_single_shot(cg_sht35_t *dev, environment_frame_t *frame)
     }
 
     uint8_t bytes[6];
-    ESP_RETURN_ON_ERROR(sht35_write_command(dev, SHT35_CMD_SINGLE_HIGH_REPEATABILITY), TAG, "single shot command failed");
+    esp_err_t ret = sht35_write_command(dev, SHT35_CMD_SINGLE_HIGH_REPEATABILITY);
+    if (ret != ESP_OK) {
+        return ret;
+    }
+
     vTaskDelay(pdMS_TO_TICKS(20));
-    ESP_RETURN_ON_ERROR(cg_i2c_read(dev->port, dev->address, bytes, sizeof(bytes), pdMS_TO_TICKS(CG_I2C_TIMEOUT_MS)), TAG, "single shot read failed");
+    ret = cg_i2c_read(dev->port, dev->address, bytes, sizeof(bytes), pdMS_TO_TICKS(CG_I2C_TIMEOUT_MS));
+    if (ret != ESP_OK) {
+        return ret;
+    }
 
     if (cg_sht35_crc8(&bytes[0], 2) != bytes[2] || cg_sht35_crc8(&bytes[3], 2) != bytes[5]) {
         frame->sht35_valid = false;
@@ -77,9 +100,9 @@ esp_err_t cg_sht35_read_single_shot(cg_sht35_t *dev, environment_frame_t *frame)
 
     uint16_t raw_temp = read_be16(&bytes[0]);
     uint16_t raw_humidity = read_be16(&bytes[3]);
-    frame->timestamp_ms = (uint32_t)(esp_timer_get_time() / 1000ULL);
-    frame->temperature_c = -45.0f + 175.0f * ((float)raw_temp / 65535.0f);
-    frame->humidity_rh = 100.0f * ((float)raw_humidity / 65535.0f);
+    frame->sht35_timestamp_ms = (uint32_t)(esp_timer_get_time() / 1000ULL);
+    frame->sht35_temperature_c = -45.0f + 175.0f * ((float)raw_temp / 65535.0f);
+    frame->sht35_humidity_rh = 100.0f * ((float)raw_humidity / 65535.0f);
     frame->sht35_valid = true;
     return ESP_OK;
 }
