@@ -28,6 +28,7 @@ HEIGHT = 24
 PIXEL_COUNT = WIDTH * HEIGHT
 PAYLOAD_LEN = PIXEL_COUNT * 4
 DEFAULT_BAUD = 115200
+VIEWER_VERSION = "V1"
 
 
 @dataclass
@@ -134,7 +135,7 @@ class SerialReader(threading.Thread):
 class ThermalViewer(tk.Tk):
     def __init__(self) -> None:
         super().__init__()
-        self.title("MLX90640 Thermal Viewer")
+        self.title(f"MLX90640 Thermal Viewer {VIEWER_VERSION}")
         self.resizable(False, False)
 
         self.frame_queue: queue.Queue = queue.Queue()
