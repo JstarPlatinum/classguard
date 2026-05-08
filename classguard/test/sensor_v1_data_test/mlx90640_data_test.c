@@ -195,7 +195,8 @@ static const char *thermal_send_status_name(thermal_send_status_t status)
 void mlx90640_data_test_run(void)
 {
     esp_log_level_set("*", ESP_LOG_NONE);
-    printf("MLX90640 test task started at console baud 115200; switching UART0 to %u baud.\r\n",
+    printf("MLX90640 %s test task started at console baud 115200; switching UART0 to %u baud.\r\n",
+           CG_MLX90640_TEST_VERSION,
            CG_THERMAL_UART_BAUD_RATE);
 
     esp_err_t ret = thermal_uart_init();
@@ -203,7 +204,8 @@ void mlx90640_data_test_run(void)
         printf("MLX90640 test UART init failed: %s\r\n", esp_err_to_name(ret));
         return;
     }
-    printf("MLX90640 test UART ready: port=%d tx=%d rx=%d baud=%u\r\n",
+    printf("MLX90640 %s test UART ready: port=%d tx=%d rx=%d baud=%u\r\n",
+           CG_MLX90640_TEST_VERSION,
            CG_UART_THERMAL_TEST_PORT,
            CG_PIN_THERMAL_TEST_TX,
            CG_PIN_THERMAL_TEST_RX,
