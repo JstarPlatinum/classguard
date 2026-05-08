@@ -1,0 +1,19 @@
+idf_component_register(
+    SRCS
+        "i2c_bus/i2c_bus.c"
+        "mlx90640/mlx90640.c"
+        "scd41/scd41.c"
+        "sht35/sht35.c"
+        "pms5003/pms5003.c"
+        "beam_sensor/beam_sensor.c"
+        "hub75_display/hub75_display.c"
+    INCLUDE_DIRS
+        "i2c_bus/include"
+        "mlx90640/include"
+        "scd41/include"
+        "sht35/include"
+        "pms5003/include"
+        "beam_sensor/include"
+        "hub75_display/include"
+    REQUIRES common driver esp_timer
+)
