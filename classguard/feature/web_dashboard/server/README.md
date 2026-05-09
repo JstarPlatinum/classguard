@@ -32,6 +32,10 @@ cd g:\python\chuangke\classguard\feature\web_dashboard\server
 g:\python\chuangke\classguard\.venv\Scripts\python.exe mock_sender.py
 ```
 
+```powershell
+Stop-Process -Id 22324
+```
+
 Open the dashboard:
 
 ```text
