@@ -6,6 +6,8 @@ from typing import Dict
 
 import requests
 
+# This is a test tool， whice can send message to the service with your PC.
+# Not using ESP32!!!
 
 DEVICE_ID = "esp32s3_node_001"
 DEVICE_TOKEN = "classguard_test_token_001"
