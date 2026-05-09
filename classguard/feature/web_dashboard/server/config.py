@@ -1,0 +1,15 @@
+from pathlib import Path
+
+
+BASE_DIR = Path(__file__).resolve().parent
+DATA_DIR = BASE_DIR / "data"
+DATABASE_PREFIX = "telemetry"
+DATABASE_FILE_MAX_BYTES = 100 * 1024 * 1024
+DATABASE_DIR_MAX_BYTES = int(1.2 * 1024 * 1024 * 1024)
+
+DEVICE_TOKEN = "classguard_test_token_001"
+ALLOWED_DEVICE_IDS = {"esp32s3_node_001"}
+
+HISTORY_DEFAULT_LIMIT = 120
+HISTORY_MAX_LIMIT = 1000
+OFFLINE_AFTER_SECONDS = 10

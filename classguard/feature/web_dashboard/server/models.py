@@ -1,0 +1,49 @@
+from typing import Optional
+
+from pydantic import BaseModel, Field
+
+
+class WifiInfo(BaseModel):
+    rssi: Optional[int] = None
+    ip: Optional[str] = None
+
+
+class Scd41Data(BaseModel):
+    co2_ppm: Optional[float] = Field(default=None, ge=0)
+    temperature_c: Optional[float] = None
+    humidity_percent: Optional[float] = Field(default=None, ge=0, le=100)
+
+
+class Pms5003Data(BaseModel):
+    pm1_0: Optional[float] = Field(default=None, ge=0)
+    pm2_5: Optional[float] = Field(default=None, ge=0)
+    pm10: Optional[float] = Field(default=None, ge=0)
+
+
+class Mlx90640Data(BaseModel):
+    frame_rate: Optional[float] = Field(default=None, ge=0)
+    temp_min_c: Optional[float] = None
+    temp_max_c: Optional[float] = None
+    temp_avg_c: Optional[float] = None
+
+
+class SensorGroup(BaseModel):
+    scd41: Optional[Scd41Data] = None
+    pms5003: Optional[Pms5003Data] = None
+    mlx90640: Optional[Mlx90640Data] = None
+
+
+class DeviceStatus(BaseModel):
+    sensor_ok: bool = True
+    error_code: int = 0
+    error_message: str = ""
+
+
+class TelemetryIn(BaseModel):
+    device_id: str
+    firmware: Optional[str] = None
+    timestamp: Optional[float] = 0
+    uptime_ms: Optional[int] = Field(default=None, ge=0)
+    wifi: Optional[WifiInfo] = None
+    sensors: Optional[SensorGroup] = None
+    status: Optional[DeviceStatus] = None
