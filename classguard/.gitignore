@@ -18,9 +18,10 @@ data/
 *.onnx
 *.h5
 *.pkl
+*.db
 # C extensions
 *.so
-*.db
+feature\web_dashboard\server\data
 sdkconfig
 sdkconfig.old
 
