@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ClassGuard 本地看板</title>
+    <link rel="stylesheet" href="/static/style.css" />
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  </head>
+  <body>
+    <main class="shell">
+      <header class="topbar">
+        <div>
+          <h1>ClassGuard 本地看板</h1>
+          <p id="connectionText">等待数据接入</p>
+        </div>
+        <div class="status-pill" id="onlineState">未连接</div>
+      </header>
+
+      <section class="device-strip" aria-label="设备状态">
+        <div>
+          <span>设备</span>
+          <strong id="deviceId">--</strong>
+        </div>
+        <div>
+          <span>固件</span>
+          <strong id="firmware">--</strong>
+        </div>
+        <div>
+          <span>WiFi RSSI</span>
+          <strong id="wifiRssi">--</strong>
+        </div>
+        <div>
+          <span>设备 IP</span>
+          <strong id="deviceIp">--</strong>
+        </div>
+        <div>
+          <span>最近上传</span>
+          <strong id="lastSeen">--</strong>
+        </div>
+      </section>
+
+      <section class="metric-grid" aria-label="实时参数">
+        <article class="metric-card">
+          <span>CO2</span>
+          <strong id="co2">--</strong>
+          <small>ppm</small>
+        </article>
+        <article class="metric-card">
+          <span>温度</span>
+          <strong id="temperature">--</strong>
+          <small>deg C</small>
+        </article>
+        <article class="metric-card">
+          <span>湿度</span>
+          <strong id="humidity">--</strong>
+          <small>%RH</small>
+        </article>
+        <article class="metric-card">
+          <span>PM1.0</span>
+          <strong id="pm10small">--</strong>
+          <small>ug/m3</small>
+        </article>
+        <article class="metric-card">
+          <span>PM2.5</span>
+          <strong id="pm25">--</strong>
+          <small>ug/m3</small>
+        </article>
+        <article class="metric-card">
+          <span>PM10</span>
+          <strong id="pm10">--</strong>
+          <small>ug/m3</small>
+        </article>
+        <article class="metric-card">
+          <span>红外最高</span>
+          <strong id="mlxMax">--</strong>
+          <small>deg C</small>
+        </article>
+        <article class="metric-card">
+          <span>红外平均</span>
+          <strong id="mlxAvg">--</strong>
+          <small>deg C</small>
+        </article>
+      </section>
+
+      <section class="content-grid">
+        <div class="chart-panel">
+          <div class="panel-title">
+            <h2>空气质量</h2>
+            <span>CO2 / PM2.5</span>
+          </div>
+          <div class="chart" id="airChart"></div>
+        </div>
+        <div class="chart-panel">
+          <div class="panel-title">
+            <h2>环境趋势</h2>
+            <span>温度 / 湿度</span>
+          </div>
+          <div class="chart" id="envChart"></div>
+        </div>
+        <div class="chart-panel">
+          <div class="panel-title">
+            <h2>颗粒物</h2>
+            <span>PM1.0 / PM2.5 / PM10</span>
+          </div>
+          <div class="chart" id="pmChart"></div>
+        </div>
+        <div class="chart-panel">
+          <div class="panel-title">
+            <h2>红外温度</h2>
+            <span>min / avg / max</span>
+          </div>
+          <div class="chart" id="thermalChart"></div>
+        </div>
+      </section>
+
+      <section class="log-panel" aria-label="报警与日志">
+        <div class="panel-title">
+          <h2>报警与日志</h2>
+          <span id="sampleCount">0 条记录</span>
+        </div>
+        <ul id="alerts"></ul>
+      </section>
+    </main>
+
+    <script src="/static/dashboard.js"></script>
+  </body>
+</html>
