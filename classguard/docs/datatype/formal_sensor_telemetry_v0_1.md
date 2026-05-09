@@ -4,6 +4,16 @@ This document records the data names and types used by the formal SHT35,
 SCD41 and PMS5003 integration. Use these names when adding LED display,
 rules, storage or later MLX90640 processing code.
 
+共享数据接口：app_data.h (line 26)
+
+后续 LED 显示可以直接调用：
+
+```c
+uint32_t sensor_error_mask;
+cg_app_sensor_snapshot_t snapshot;
+cg_app_data_get_latest(&snapshot);
+```
+
 ## ESP32 Shared Data Interface
 
 Header: `main/app_data.h`
