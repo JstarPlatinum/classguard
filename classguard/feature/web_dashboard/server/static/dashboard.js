@@ -92,8 +92,10 @@ function renderLatest(item) {
   setText(fields.deviceIp, item.wifi_ip);
   setText(fields.lastSeen, fmtTime(item.received_at));
   setText(fields.co2, fmt(item.co2_ppm, 0));
-  setText(fields.temperature, fmt(item.temperature_c, 1));
-  setText(fields.humidity, fmt(item.humidity_percent, 1));
+  const displayTemperature = item.sht35_temperature_c ?? item.temperature_c;
+  const displayHumidity = item.sht35_humidity_percent ?? item.humidity_percent;
+  setText(fields.temperature, fmt(displayTemperature, 1));
+  setText(fields.humidity, fmt(displayHumidity, 1));
   setText(fields.pm10small, fmt(item.pm1_0, 0));
   setText(fields.pm25, fmt(item.pm2_5, 0));
   setText(fields.pm10, fmt(item.pm10, 0));
@@ -171,8 +173,10 @@ function renderCharts() {
   );
   state.charts.env.setOption(
     chartOption([
-      buildSeries("温度", "temperature_c", "#c24135"),
-      buildSeries("湿度", "humidity_percent", "#138a5b"),
+      buildSeries("SHT35 温度", "sht35_temperature_c", "#c24135"),
+      buildSeries("SHT35 湿度", "sht35_humidity_percent", "#138a5b"),
+      buildSeries("SCD41 温度", "temperature_c", "#7c3aed"),
+      buildSeries("SCD41 湿度", "humidity_percent", "#2563eb"),
     ], "deg C / %RH")
   );
   state.charts.pm.setOption(

@@ -8,6 +8,7 @@ venv/
 .env
 dist/
 build/
+data/
 *.exe
 *.zip
 *.rar
@@ -19,6 +20,7 @@ build/
 *.pkl
 # C extensions
 *.so
+*.db
 sdkconfig
 sdkconfig.old
 

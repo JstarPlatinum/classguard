@@ -1,3 +1,17 @@
 idf_component_register(
-    
+    SRCS
+        "main.c"
+        "app_data.c"
+        "sensor_service.c"
+        "telemetry_upload.c"
+    INCLUDE_DIRS
+        "."
+    REQUIRES
+        common
+        drivers
+        esp_event
+        esp_http_client
+        esp_netif
+        esp_wifi
+        nvs_flash
 )

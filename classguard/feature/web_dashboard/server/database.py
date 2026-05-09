@@ -22,6 +22,8 @@ CREATE TABLE IF NOT EXISTS telemetry (
     co2_ppm REAL,
     temperature_c REAL,
     humidity_percent REAL,
+    sht35_temperature_c REAL,
+    sht35_humidity_percent REAL,
     pm1_0 REAL,
     pm2_5 REAL,
     pm10 REAL,
@@ -34,6 +36,12 @@ CREATE TABLE IF NOT EXISTS telemetry (
     raw_json TEXT NOT NULL
 );
 """
+
+
+SCHEMA_MIGRATIONS = {
+    "sht35_temperature_c": "ALTER TABLE telemetry ADD COLUMN sht35_temperature_c REAL",
+    "sht35_humidity_percent": "ALTER TABLE telemetry ADD COLUMN sht35_humidity_percent REAL",
+}
 
 
 def _db_files() -> List[Path]:
@@ -76,6 +84,11 @@ async def _ensure_database(path: Path) -> None:
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     async with aiosqlite.connect(path) as db:
         await db.execute(CREATE_TABLE_SQL)
+        cursor = await db.execute("PRAGMA table_info(telemetry)")
+        existing_columns = {row[1] for row in await cursor.fetchall()}
+        for column, sql in SCHEMA_MIGRATIONS.items():
+            if column not in existing_columns:
+                await db.execute(sql)
         await db.commit()
 
 
@@ -115,6 +128,7 @@ def _extract(payload: TelemetryIn) -> Dict[str, Any]:
     wifi = payload.wifi
     sensors = payload.sensors
     scd41 = sensors.scd41 if sensors else None
+    sht35 = sensors.sht35 if sensors else None
     pms5003 = sensors.pms5003 if sensors else None
     mlx90640 = sensors.mlx90640 if sensors else None
     status = payload.status
@@ -128,6 +142,8 @@ def _extract(payload: TelemetryIn) -> Dict[str, Any]:
         "co2_ppm": scd41.co2_ppm if scd41 else None,
         "temperature_c": scd41.temperature_c if scd41 else None,
         "humidity_percent": scd41.humidity_percent if scd41 else None,
+        "sht35_temperature_c": sht35.temperature_c if sht35 else None,
+        "sht35_humidity_percent": sht35.humidity_percent if sht35 else None,
         "pm1_0": pms5003.pm1_0 if pms5003 else None,
         "pm2_5": pms5003.pm2_5 if pms5003 else None,
         "pm10": pms5003.pm10 if pms5003 else None,
@@ -162,6 +178,7 @@ async def insert_telemetry(payload: TelemetryIn, received_at: datetime) -> Dict[
             INSERT INTO telemetry (
                 received_at, device_id, firmware, uptime_ms, wifi_rssi, wifi_ip,
                 co2_ppm, temperature_c, humidity_percent,
+                sht35_temperature_c, sht35_humidity_percent,
                 pm1_0, pm2_5, pm10,
                 mlx_temp_min_c, mlx_temp_max_c, mlx_temp_avg_c,
                 sensor_ok, error_code, error_message, raw_json
@@ -169,6 +186,7 @@ async def insert_telemetry(payload: TelemetryIn, received_at: datetime) -> Dict[
             VALUES (
                 :received_at, :device_id, :firmware, :uptime_ms, :wifi_rssi, :wifi_ip,
                 :co2_ppm, :temperature_c, :humidity_percent,
+                :sht35_temperature_c, :sht35_humidity_percent,
                 :pm1_0, :pm2_5, :pm10,
                 :mlx_temp_min_c, :mlx_temp_max_c, :mlx_temp_avg_c,
                 :sensor_ok, :error_code, :error_message, :raw_json

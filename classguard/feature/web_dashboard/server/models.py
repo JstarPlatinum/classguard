@@ -14,6 +14,11 @@ class Scd41Data(BaseModel):
     humidity_percent: Optional[float] = Field(default=None, ge=0, le=100)
 
 
+class Sht35Data(BaseModel):
+    temperature_c: Optional[float] = None
+    humidity_percent: Optional[float] = Field(default=None, ge=0, le=100)
+
+
 class Pms5003Data(BaseModel):
     pm1_0: Optional[float] = Field(default=None, ge=0)
     pm2_5: Optional[float] = Field(default=None, ge=0)
@@ -29,6 +34,7 @@ class Mlx90640Data(BaseModel):
 
 class SensorGroup(BaseModel):
     scd41: Optional[Scd41Data] = None
+    sht35: Optional[Sht35Data] = None
     pms5003: Optional[Pms5003Data] = None
     mlx90640: Optional[Mlx90640Data] = None
 
