@@ -148,11 +148,18 @@ static esp_err_t build_telemetry_json(char *body, size_t body_size, const cg_app
     char pm1_0[VALUE_TEXT_SIZE];
     char pm2_5[VALUE_TEXT_SIZE];
     char pm10[VALUE_TEXT_SIZE];
+    char mlx_min[VALUE_TEXT_SIZE];
+    char mlx_max[VALUE_TEXT_SIZE];
+    char mlx_avg[VALUE_TEXT_SIZE];
     char occupancy_ratio[VALUE_TEXT_SIZE];
+    char occupancy_heat_score[VALUE_TEXT_SIZE];
+    char occupancy_score[VALUE_TEXT_SIZE];
+    char occupancy_max_delta[VALUE_TEXT_SIZE];
 
     bool scd41_valid = snapshot->environment.scd41_valid;
     bool sht35_valid = snapshot->environment.sht35_valid;
     bool pms_valid = snapshot->pm.valid;
+    bool thermal_valid = snapshot->thermal.valid;
     bool occupancy_valid = snapshot->occupancy.valid;
 
     get_local_ip(ip_addr, sizeof(ip_addr));
@@ -164,7 +171,17 @@ static esp_err_t build_telemetry_json(char *body, size_t body_size, const cg_app
     format_uint_or_null(pm1_0, sizeof(pm1_0), pms_valid, snapshot->pm.pm1_0_atm);
     format_uint_or_null(pm2_5, sizeof(pm2_5), pms_valid, snapshot->pm.pm2_5_atm);
     format_uint_or_null(pm10, sizeof(pm10), pms_valid, snapshot->pm.pm10_atm);
+    format_float_or_null(mlx_min, sizeof(mlx_min), thermal_valid, snapshot->thermal.min_temp_c, 2);
+    format_float_or_null(mlx_max, sizeof(mlx_max), thermal_valid, snapshot->thermal.max_temp_c, 2);
+    format_float_or_null(mlx_avg, sizeof(mlx_avg), thermal_valid, snapshot->thermal.avg_temp_c, 2);
     format_float_or_null(occupancy_ratio, sizeof(occupancy_ratio), occupancy_valid, snapshot->occupancy.occupancy_ratio, 4);
+    format_float_or_null(occupancy_heat_score,
+                         sizeof(occupancy_heat_score),
+                         occupancy_valid,
+                         snapshot->occupancy.occupancy_heat_score,
+                         4);
+    format_float_or_null(occupancy_score, sizeof(occupancy_score), occupancy_valid, snapshot->occupancy.occupancy_score, 4);
+    format_float_or_null(occupancy_max_delta, sizeof(occupancy_max_delta), occupancy_valid, snapshot->occupancy.max_delta, 2);
 
     uint32_t uptime_ms = (uint32_t)(xTaskGetTickCount() * portTICK_PERIOD_MS);
     bool sensor_ok = snapshot->sensor_error_mask == 0;
@@ -182,7 +199,11 @@ static esp_err_t build_telemetry_json(char *body, size_t body_size, const cg_app
         "\"scd41\":{\"co2_ppm\":%s,\"temperature_c\":%s,\"humidity_percent\":%s},"
         "\"sht35\":{\"temperature_c\":%s,\"humidity_percent\":%s},"
         "\"pms5003\":{\"pm1_0\":%s,\"pm2_5\":%s,\"pm10\":%s},"
-        "\"mlx90640\":{\"occupied\":%s,\"occupancy_ratio\":%s}"
+        "\"mlx90640\":{"
+        "\"temp_min_c\":%s,\"temp_max_c\":%s,\"temp_avg_c\":%s,"
+        "\"occupied\":%s,\"occupancy_ratio\":%s,\"occupancy_heat_score\":%s,\"occupancy_score\":%s,"
+        "\"state\":%d,\"max_delta\":%s,\"valid_pixels\":%u,\"max_region_area\":%u"
+        "}"
         "},"
         "\"status\":{\"sensor_ok\":%s,\"error_code\":%lu,\"error_message\":\"%s\"}"
         "}",
@@ -198,8 +219,17 @@ static esp_err_t build_telemetry_json(char *body, size_t body_size, const cg_app
         pm1_0,
         pm2_5,
         pm10,
+        mlx_min,
+        mlx_max,
+        mlx_avg,
         occupancy_valid ? (snapshot->occupancy.occupied ? "true" : "false") : "null",
         occupancy_ratio,
+        occupancy_heat_score,
+        occupancy_score,
+        occupancy_valid ? (int)snapshot->occupancy.state : -1,
+        occupancy_max_delta,
+        occupancy_valid ? (unsigned int)snapshot->occupancy.valid_pixels : 0U,
+        occupancy_valid ? (unsigned int)snapshot->occupancy.max_region_area : 0U,
         sensor_ok ? "true" : "false",
         (unsigned long)snapshot->sensor_error_mask,
         snapshot->error_message);

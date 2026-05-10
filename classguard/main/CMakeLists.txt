@@ -3,11 +3,10 @@ idf_component_register(
         "main.c"
         "app_data.c"
         "sensor_service.c"
+        "thermal_service.c"
         "telemetry_upload.c"
-        "../test/sensor_v1_data_test/mlx90640_data_test.c"
     INCLUDE_DIRS
         "."
-        "../test/sensor_v1_data_test"
     REQUIRES
         common
         drivers

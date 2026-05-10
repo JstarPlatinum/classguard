@@ -127,6 +127,17 @@ void cg_app_data_update_pms5003(const pm_frame_t *frame)
     unlock_data();
 }
 
+void cg_app_data_update_thermal(const thermal_frame_t *frame)
+{
+    if (frame == NULL || !frame->valid) {
+        return;
+    }
+
+    lock_data();
+    s_latest.thermal = *frame;
+    unlock_data();
+}
+
 void cg_app_data_update_occupancy(const occupancy_frame_t *frame)
 {
     if (frame == NULL || !frame->valid) {

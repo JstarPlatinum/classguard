@@ -30,6 +30,14 @@ class Mlx90640Data(BaseModel):
     temp_min_c: Optional[float] = None
     temp_max_c: Optional[float] = None
     temp_avg_c: Optional[float] = None
+    occupied: Optional[bool] = None
+    occupancy_ratio: Optional[float] = Field(default=None, ge=0)
+    occupancy_heat_score: Optional[float] = Field(default=None, ge=0)
+    occupancy_score: Optional[float] = Field(default=None, ge=0)
+    state: Optional[int] = None
+    max_delta: Optional[float] = None
+    valid_pixels: Optional[int] = Field(default=None, ge=0)
+    max_region_area: Optional[int] = Field(default=None, ge=0)
 
 
 class SensorGroup(BaseModel):

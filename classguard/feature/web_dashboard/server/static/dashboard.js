@@ -46,6 +46,19 @@ function setText(el, value) {
   el.textContent = value ?? "--";
 }
 
+function relabelThermalCards() {
+  const ratioCard = fields.mlxMax?.closest(".metric-card");
+  const stateCard = fields.mlxAvg?.closest(".metric-card");
+  if (ratioCard) {
+    ratioCard.querySelector("span").textContent = "占有率";
+    ratioCard.querySelector("small").textContent = "ratio";
+  }
+  if (stateCard) {
+    stateCard.querySelector("span").textContent = "占用状态";
+    stateCard.querySelector("small").textContent = "MLX90640";
+  }
+}
+
 function updateStatus() {
   const pill = fields.onlineState;
   const latest = state.latest;
@@ -99,8 +112,8 @@ function renderLatest(item) {
   setText(fields.pm10small, fmt(item.pm1_0, 0));
   setText(fields.pm25, fmt(item.pm2_5, 0));
   setText(fields.pm10, fmt(item.pm10, 0));
-  setText(fields.mlxMax, fmt(item.mlx_temp_max_c, 1));
-  setText(fields.mlxAvg, fmt(item.mlx_temp_avg_c, 1));
+  setText(fields.mlxMax, fmt(item.mlx_occupancy_ratio, 3));
+  setText(fields.mlxAvg, item.mlx_occupied === null || item.mlx_occupied === undefined ? "--" : item.mlx_occupied ? "有人" : "无人");
 
   updateStatus();
   renderAlerts();
@@ -188,10 +201,10 @@ function renderCharts() {
   );
   state.charts.thermal.setOption(
     chartOption([
-      buildSeries("最低", "mlx_temp_min_c", "#2563eb"),
-      buildSeries("平均", "mlx_temp_avg_c", "#138a5b"),
-      buildSeries("最高", "mlx_temp_max_c", "#c24135"),
-    ], "deg C")
+      buildSeries("占有率", "mlx_occupancy_ratio", "#2563eb"),
+      buildSeries("热强度", "mlx_occupancy_heat_score", "#138a5b"),
+      buildSeries("综合分", "mlx_occupancy_score", "#c24135"),
+    ], "score")
   );
 }
 
@@ -258,6 +271,7 @@ function connectEvents() {
 }
 
 async function boot() {
+  relabelThermalCards();
   initCharts();
   try {
     await loadInitialData();
