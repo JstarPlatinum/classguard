@@ -15,6 +15,43 @@ static const char *TAG = "cg_mlx90640";
 #define MLX90640_FRAME_SUBPAGES 2U
 #define MLX90640_EMISSIVITY_DEFAULT 0.95f
 
+static bool mlx90640_temperature_is_valid(float value)
+{
+    return isfinite(value) && value >= CG_MLX90640_VALID_MIN_TEMP_C && value <= CG_MLX90640_VALID_MAX_TEMP_C;
+}
+
+static void mlx90640_finalize_frame(thermal_frame_t *frame)
+{
+    float min_temp = FLT_MAX;
+    float max_temp = -FLT_MAX;
+    float sum_temp = 0.0f;
+    uint16_t hotspot_index = 0;
+
+    for (uint16_t i = 0; i < CG_MLX90640_PIXEL_COUNT; ++i) {
+        float value = frame->pixels[i];
+        if (!mlx90640_temperature_is_valid(value)) {
+            value = 0.0f;
+            frame->pixels[i] = value;
+        }
+
+        if (value < min_temp) {
+            min_temp = value;
+        }
+        if (value > max_temp) {
+            max_temp = value;
+            hotspot_index = i;
+        }
+        sum_temp += value;
+    }
+
+    frame->timestamp_ms = (uint32_t)(esp_timer_get_time() / 1000ULL);
+    frame->min_temp_c = min_temp;
+    frame->max_temp_c = max_temp;
+    frame->avg_temp_c = sum_temp / (float)CG_MLX90640_PIXEL_COUNT;
+    frame->hotspot_index = hotspot_index;
+    frame->valid = true;
+}
+
 esp_err_t cg_mlx90640_init(cg_mlx90640_t *dev, i2c_port_t port)
 {
     if (dev == NULL) {
@@ -126,8 +163,7 @@ esp_err_t cg_mlx90640_calculate_temperatures(const uint16_t *eeprom_words, const
     MLX90640_BadPixelsCorrection(params.brokenPixels, frame->pixels, 1, &params);
     MLX90640_BadPixelsCorrection(params.outlierPixels, frame->pixels, 1, &params);
 
-    frame->timestamp_ms = (uint32_t)(esp_timer_get_time() / 1000ULL);
-    frame->valid = true;
+    mlx90640_finalize_frame(frame);
     return ESP_OK;
 }
 
@@ -158,35 +194,10 @@ esp_err_t cg_mlx90640_read_thermal_frame(cg_mlx90640_t *dev, thermal_frame_t *fr
     MLX90640_BadPixelsCorrection(dev->params.brokenPixels, pixels, 1, &dev->params);
     MLX90640_BadPixelsCorrection(dev->params.outlierPixels, pixels, 1, &dev->params);
 
-    float min_temp = FLT_MAX;
-    float max_temp = -FLT_MAX;
-    float sum_temp = 0.0f;
-    uint16_t hotspot_index = 0;
-    uint16_t valid_count = 0;
-
     for (uint16_t i = 0; i < CG_MLX90640_PIXEL_COUNT; ++i) {
-        float value = pixels[i];
-        frame->pixels[i] = value;
-        if (!isfinite(value)) {
-            continue;
-        }
-
-        if (value < min_temp) {
-            min_temp = value;
-        }
-        if (value > max_temp) {
-            max_temp = value;
-            hotspot_index = i;
-        }
-        sum_temp += value;
-        ++valid_count;
+        frame->pixels[i] = pixels[i];
     }
 
-    frame->timestamp_ms = (uint32_t)(esp_timer_get_time() / 1000ULL);
-    frame->min_temp_c = (valid_count > 0) ? min_temp : 0.0f;
-    frame->max_temp_c = (valid_count > 0) ? max_temp : 0.0f;
-    frame->avg_temp_c = (valid_count > 0) ? (sum_temp / (float)valid_count) : 0.0f;
-    frame->hotspot_index = hotspot_index;
-    frame->valid = valid_count == CG_MLX90640_PIXEL_COUNT;
-    return frame->valid ? ESP_OK : ESP_ERR_INVALID_RESPONSE;
+    mlx90640_finalize_frame(frame);
+    return ESP_OK;
 }
