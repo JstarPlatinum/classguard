@@ -4,11 +4,14 @@ idf_component_register(
         "app_data.c"
         "sensor_service.c"
         "telemetry_upload.c"
+        "../test/sensor_v1_data_test/mlx90640_data_test.c"
     INCLUDE_DIRS
         "."
+        "../test/sensor_v1_data_test"
     REQUIRES
         common
         drivers
+        services
         esp_event
         esp_http_client
         esp_netif

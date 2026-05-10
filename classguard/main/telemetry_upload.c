@@ -22,11 +22,6 @@
 #define TELEMETRY_BODY_SIZE 1792U
 #define VALUE_TEXT_SIZE 24U
 
-#define FIXED_MLX_FRAME_RATE 0.0f
-#define FIXED_MLX_TEMP_MIN_C 24.0f
-#define FIXED_MLX_TEMP_MAX_C 24.0f
-#define FIXED_MLX_TEMP_AVG_C 24.0f
-
 static const char *TAG = "cg_upload";
 static EventGroupHandle_t s_wifi_event_group;
 static esp_netif_t *s_sta_netif;
@@ -153,10 +148,12 @@ static esp_err_t build_telemetry_json(char *body, size_t body_size, const cg_app
     char pm1_0[VALUE_TEXT_SIZE];
     char pm2_5[VALUE_TEXT_SIZE];
     char pm10[VALUE_TEXT_SIZE];
+    char occupancy_ratio[VALUE_TEXT_SIZE];
 
     bool scd41_valid = snapshot->environment.scd41_valid;
     bool sht35_valid = snapshot->environment.sht35_valid;
     bool pms_valid = snapshot->pm.valid;
+    bool occupancy_valid = snapshot->occupancy.valid;
 
     get_local_ip(ip_addr, sizeof(ip_addr));
     format_uint_or_null(scd41_co2, sizeof(scd41_co2), scd41_valid, snapshot->environment.scd41_co2_ppm);
@@ -167,6 +164,7 @@ static esp_err_t build_telemetry_json(char *body, size_t body_size, const cg_app
     format_uint_or_null(pm1_0, sizeof(pm1_0), pms_valid, snapshot->pm.pm1_0_atm);
     format_uint_or_null(pm2_5, sizeof(pm2_5), pms_valid, snapshot->pm.pm2_5_atm);
     format_uint_or_null(pm10, sizeof(pm10), pms_valid, snapshot->pm.pm10_atm);
+    format_float_or_null(occupancy_ratio, sizeof(occupancy_ratio), occupancy_valid, snapshot->occupancy.occupancy_ratio, 4);
 
     uint32_t uptime_ms = (uint32_t)(xTaskGetTickCount() * portTICK_PERIOD_MS);
     bool sensor_ok = snapshot->sensor_error_mask == 0;
@@ -184,7 +182,7 @@ static esp_err_t build_telemetry_json(char *body, size_t body_size, const cg_app
         "\"scd41\":{\"co2_ppm\":%s,\"temperature_c\":%s,\"humidity_percent\":%s},"
         "\"sht35\":{\"temperature_c\":%s,\"humidity_percent\":%s},"
         "\"pms5003\":{\"pm1_0\":%s,\"pm2_5\":%s,\"pm10\":%s},"
-        "\"mlx90640\":{\"frame_rate\":%.1f,\"temp_min_c\":%.1f,\"temp_max_c\":%.1f,\"temp_avg_c\":%.1f}"
+        "\"mlx90640\":{\"occupied\":%s,\"occupancy_ratio\":%s}"
         "},"
         "\"status\":{\"sensor_ok\":%s,\"error_code\":%lu,\"error_message\":\"%s\"}"
         "}",
@@ -200,10 +198,8 @@ static esp_err_t build_telemetry_json(char *body, size_t body_size, const cg_app
         pm1_0,
         pm2_5,
         pm10,
-        (double)FIXED_MLX_FRAME_RATE,
-        (double)FIXED_MLX_TEMP_MIN_C,
-        (double)FIXED_MLX_TEMP_MAX_C,
-        (double)FIXED_MLX_TEMP_AVG_C,
+        occupancy_valid ? (snapshot->occupancy.occupied ? "true" : "false") : "null",
+        occupancy_ratio,
         sensor_ok ? "true" : "false",
         (unsigned long)snapshot->sensor_error_mask,
         snapshot->error_message);

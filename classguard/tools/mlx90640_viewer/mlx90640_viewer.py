@@ -29,6 +29,11 @@ PIXEL_COUNT = WIDTH * HEIGHT
 PAYLOAD_LEN = PIXEL_COUNT * 4
 DEFAULT_BAUD = 115200
 VIEWER_VERSION = "V1"
+DISPLAY_MIN_TEMP_C = 19.0
+DISPLAY_MAX_TEMP_C = 39.0
+COLORBAR_GAP = 16
+COLORBAR_WIDTH = 28
+COLORBAR_LABEL_WIDTH = 42
 
 
 @dataclass
@@ -151,8 +156,12 @@ class ThermalViewer(tk.Tk):
         self.error_var = tk.StringVar(value="Bytes 0  Frames 0  CRC 0  Sync 0")
 
         self.cell_size = 20
-        self.canvas = tk.Canvas(self, width=WIDTH * self.cell_size, height=HEIGHT * self.cell_size, bg="black", highlightthickness=0)
+        heatmap_width = WIDTH * self.cell_size
+        heatmap_height = HEIGHT * self.cell_size
+        canvas_width = heatmap_width + COLORBAR_GAP + COLORBAR_WIDTH + COLORBAR_LABEL_WIDTH
+        self.canvas = tk.Canvas(self, width=canvas_width, height=heatmap_height, bg="#f5f5f5", highlightthickness=0)
         self.rects: list[int] = []
+        self.colorbar_rects: list[int] = []
 
         self._build_ui()
         self._refresh_ports()
@@ -188,6 +197,7 @@ class ThermalViewer(tk.Tk):
                 x0 = x * self.cell_size
                 y0 = y * self.cell_size
                 self.rects.append(self.canvas.create_rectangle(x0, y0, x0 + self.cell_size, y0 + self.cell_size, outline="", fill="#000000"))
+        self._build_colorbar()
 
     def _refresh_ports(self) -> None:
         if list_ports is None:
@@ -263,25 +273,53 @@ class ThermalViewer(tk.Tk):
         min_temp = min(valid_pixels)
         max_temp = max(valid_pixels)
         avg_temp = sum(valid_pixels) / len(valid_pixels)
-        span = max(max_temp - min_temp, 0.001)
 
         for index, value in enumerate(frame.pixels):
-            t = 0.0 if not math.isfinite(value) else (value - min_temp) / span
-            self.canvas.itemconfigure(self.rects[index], fill=self._palette(t))
+            self.canvas.itemconfigure(self.rects[index], fill=self._temp_color(value))
 
-        self.stats_var.set(f"Min {min_temp:.1f} C  Max {max_temp:.1f} C  Avg {avg_temp:.1f} C  FPS {self.fps:.1f}")
+        self.stats_var.set(
+            f"Min {min_temp:.1f} C  Max {max_temp:.1f} C  Avg {avg_temp:.1f} C  "
+            f"Scale {DISPLAY_MIN_TEMP_C:.0f}-{DISPLAY_MAX_TEMP_C:.0f} C  FPS {self.fps:.1f}"
+        )
         self.status_var.set(f"Seq {frame.sequence}  Sensor {frame.timestamp_ms} ms")
+
+    def _build_colorbar(self) -> None:
+        heatmap_width = WIDTH * self.cell_size
+        heatmap_height = HEIGHT * self.cell_size
+        x0 = heatmap_width + COLORBAR_GAP
+        x1 = x0 + COLORBAR_WIDTH
+        steps = heatmap_height
+
+        for y in range(steps):
+            ratio = 1.0 - y / max(1, steps - 1)
+            temp = DISPLAY_MIN_TEMP_C + ratio * (DISPLAY_MAX_TEMP_C - DISPLAY_MIN_TEMP_C)
+            self.colorbar_rects.append(
+                self.canvas.create_rectangle(x0, y, x1, y + 1, outline="", fill=self._temp_color(temp))
+            )
+
+        for temp in (DISPLAY_MAX_TEMP_C, 31.0, 27.0, 24.0, DISPLAY_MIN_TEMP_C):
+            ratio = (temp - DISPLAY_MIN_TEMP_C) / (DISPLAY_MAX_TEMP_C - DISPLAY_MIN_TEMP_C)
+            y = heatmap_height - ratio * heatmap_height
+            self.canvas.create_line(x1 + 3, y, x1 + 8, y, fill="#333333")
+            self.canvas.create_text(x1 + 12, y, anchor="w", text=f"{temp:.0f}C", fill="#333333", font=("TkDefaultFont", 8))
+
+    @staticmethod
+    def _temp_color(value: float) -> str:
+        if not math.isfinite(value):
+            value = DISPLAY_MIN_TEMP_C
+        t = (value - DISPLAY_MIN_TEMP_C) / (DISPLAY_MAX_TEMP_C - DISPLAY_MIN_TEMP_C)
+        return ThermalViewer._palette(t)
 
     @staticmethod
     def _palette(t: float) -> str:
         t = min(1.0, max(0.0, t))
         stops = (
-            (0.0, (0, 0, 32)),
-            (0.20, (0, 60, 160)),
-            (0.42, (0, 180, 180)),
-            (0.62, (90, 210, 60)),
-            (0.80, (250, 180, 20)),
-            (1.0, (255, 255, 245)),
+            (0.0, (8, 22, 64)),
+            (0.10, (0, 105, 190)),
+            (0.25, (0, 185, 70)),
+            (0.40, (255, 220, 35)),
+            (0.60, (235, 45, 35)),
+            (1.0, (145, 35, 190)),
         )
         for i in range(len(stops) - 1):
             left_t, left_rgb = stops[i]

@@ -13,6 +13,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "mlx90640.h"
+#include "occupancy_detector.h"
 #include "pin_map.h"
 
 #define THERMAL_MAGIC_0 'C'
@@ -192,6 +193,20 @@ static const char *thermal_send_status_name(thermal_send_status_t status)
     }
 }
 
+static const char *occupancy_state_name(cg_occupancy_state_t state)
+{
+    switch (state) {
+    case CG_OCCUPANCY_UNOCCUPIED:
+        return "unoccupied";
+    case CG_OCCUPANCY_POSSIBLE_OCCUPIED:
+        return "possible";
+    case CG_OCCUPANCY_OCCUPIED:
+        return "occupied";
+    default:
+        return "unknown";
+    }
+}
+
 void mlx90640_data_test_run(void)
 {
     esp_log_level_set("*", ESP_LOG_NONE);
@@ -212,10 +227,12 @@ void mlx90640_data_test_run(void)
            CG_THERMAL_UART_BAUD_RATE);
 
     static cg_mlx90640_t mlx;
+    static cg_occupancy_detector_t occupancy_detector;
     while ((ret = cg_mlx90640_init(&mlx, CG_I2C_MLX_PORT)) != ESP_OK) {
         printf("MLX90640 init failed: %s, retry in %u ms\r\n", esp_err_to_name(ret), MLX90640_RETRY_DELAY_MS);
         vTaskDelay(pdMS_TO_TICKS(MLX90640_RETRY_DELAY_MS));
     }
+    cg_occupancy_detector_init(&occupancy_detector);
     printf("MLX90640 init ok: i2c_port=%d addr=0x%02X period=%u ms\r\n",
            CG_I2C_MLX_PORT,
            CG_ADDR_MLX90640,
@@ -228,6 +245,8 @@ void mlx90640_data_test_run(void)
         memset(&frame, 0, sizeof(frame));
         ret = cg_mlx90640_read_thermal_frame(&mlx, &frame);
         if (ret == ESP_OK && frame.valid) {
+            occupancy_frame_t occupancy = {0};
+            esp_err_t occ_ret = cg_occupancy_detector_update(&occupancy_detector, &frame, &occupancy);
             uint32_t sent_sequence = sequence++;
             size_t written_total = 0;
             thermal_send_status_t send_status = thermal_uart_send_frame(&frame, sent_sequence, &written_total);
@@ -241,6 +260,29 @@ void mlx90640_data_test_run(void)
                    frame.max_temp_c,
                    frame.avg_temp_c,
                    frame.hotspot_index);
+            if (occ_ret == ESP_OK && occupancy.valid) {
+                printf("MLX90640 occupancy: state=%s occupied=%d ratio=%.4f heat=%.4f score=%.4f BG=%.2f INT=%.2f CAND=%u OUT=%u HREF=%.2f TH=%.2f max_delta=%.2f pixels=%u region=%u\r\n",
+                       occupancy_state_name(occupancy.state),
+                       occupancy.occupied ? 1 : 0,
+                       occupancy.occupancy_ratio,
+                       occupancy.occupancy_heat_score,
+                       occupancy.occupancy_score,
+                       occupancy.background_temp,
+                       occupancy.interference_threshold,
+                       occupancy.candidate_count,
+                       occupancy.outlier_count,
+                       occupancy.human_ref_temp,
+                       occupancy.final_threshold,
+                       occupancy.max_delta,
+                       occupancy.valid_pixels,
+                       occupancy.max_region_area);
+            } else if (occ_ret == ESP_OK) {
+                printf("MLX90640 occupancy initializing: %u/%u background frames\r\n",
+                       occupancy_detector.init_frames,
+                       CG_OCCUPANCY_BACKGROUND_INIT_FRAMES);
+            } else {
+                printf("MLX90640 occupancy failed: %s\r\n", esp_err_to_name(occ_ret));
+            }
         } else if (ret == ESP_OK) {
             printf("MLX90640 frame invalid: ts=%lu min=%.2f max=%.2f avg=%.2f hotspot=%u\r\n",
                    (unsigned long)frame.timestamp_ms,
