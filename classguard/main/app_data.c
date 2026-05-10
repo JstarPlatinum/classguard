@@ -5,7 +5,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
 
-#define SENSOR_ERROR_SLOT_COUNT 3U
+#define SENSOR_ERROR_SLOT_COUNT 4U
 #define SENSOR_ERROR_TEXT_MAX_LEN 64U
 
 typedef struct {
@@ -19,6 +19,7 @@ static sensor_error_slot_t s_sensor_errors[SENSOR_ERROR_SLOT_COUNT] = {
     {.bit = CG_SENSOR_STATUS_SHT35},
     {.bit = CG_SENSOR_STATUS_SCD41},
     {.bit = CG_SENSOR_STATUS_PMS5003},
+    {.bit = CG_SENSOR_STATUS_MLX90640},
 };
 
 static void lock_data(void)
@@ -123,6 +124,17 @@ void cg_app_data_update_pms5003(const pm_frame_t *frame)
 
     lock_data();
     s_latest.pm = *frame;
+    unlock_data();
+}
+
+void cg_app_data_update_occupancy(const occupancy_frame_t *frame)
+{
+    if (frame == NULL || !frame->valid) {
+        return;
+    }
+
+    lock_data();
+    s_latest.occupancy = *frame;
     unlock_data();
 }
 

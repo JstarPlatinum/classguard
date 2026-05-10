@@ -32,6 +32,26 @@ typedef struct {
     bool valid;
 } thermal_frame_t;
 
+typedef enum {
+    CG_OCCUPANCY_UNOCCUPIED = 0,
+    CG_OCCUPANCY_POSSIBLE_OCCUPIED,
+    CG_OCCUPANCY_OCCUPIED,
+} cg_occupancy_state_t;
+
+typedef struct {
+    uint32_t timestamp_ms;
+    float occupancy_ratio;
+    float occupancy_score;
+    float threshold;
+    float max_delta;
+    uint16_t valid_pixels;
+    uint16_t max_region_area;
+    uint16_t bins[5];
+    cg_occupancy_state_t state;
+    bool occupied;
+    bool valid;
+} occupancy_frame_t;
+
 typedef struct {
     uint32_t scd41_timestamp_ms;
     uint16_t scd41_co2_ppm;

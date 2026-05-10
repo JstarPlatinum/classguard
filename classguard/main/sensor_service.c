@@ -7,6 +7,8 @@
 #include "esp_err.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "mlx90640.h"
+#include "occupancy_detector.h"
 #include "pin_map.h"
 #include "pms5003.h"
 #include "scd41.h"
@@ -14,6 +16,7 @@
 
 #define ENV_SENSOR_TASK_STACK_SIZE 4096U
 #define PMS5003_TASK_STACK_SIZE 4096U
+#define MLX90640_TASK_STACK_SIZE 24576U
 #define SENSOR_TASK_PRIORITY 5U
 
 #define SENSOR_INIT_RETRY_DELAY_MS 2000U
@@ -175,6 +178,55 @@ static void pms5003_sensor_task(void *arg)
     }
 }
 
+static void mlx90640_occupancy_task(void *arg)
+{
+    (void)arg;
+
+    static cg_mlx90640_t mlx;
+    static cg_occupancy_detector_t detector;
+    cg_occupancy_detector_init(&detector);
+    bool ready = false;
+
+    for (;;) {
+        if (!ready) {
+            esp_err_t ret = cg_mlx90640_init(&mlx, CG_I2C_MLX_PORT);
+            if (ret != ESP_OK) {
+                cg_app_data_set_sensor_error(CG_SENSOR_STATUS_MLX90640, "mlx90640_init", ret);
+                vTaskDelay(pdMS_TO_TICKS(SENSOR_INIT_RETRY_DELAY_MS));
+                continue;
+            }
+
+            cg_occupancy_detector_init(&detector);
+            cg_app_data_clear_sensor_error(CG_SENSOR_STATUS_MLX90640);
+            ready = true;
+        }
+
+        static thermal_frame_t frame;
+        memset(&frame, 0, sizeof(frame));
+        esp_err_t ret = cg_mlx90640_read_thermal_frame(&mlx, &frame);
+        if (ret != ESP_OK || !frame.valid) {
+            cg_app_data_set_sensor_error(CG_SENSOR_STATUS_MLX90640, "mlx90640_read", ret);
+            ready = false;
+            vTaskDelay(pdMS_TO_TICKS(SENSOR_INIT_RETRY_DELAY_MS));
+            continue;
+        }
+
+        static occupancy_frame_t occupancy;
+        memset(&occupancy, 0, sizeof(occupancy));
+        ret = cg_occupancy_detector_update(&detector, &frame, &occupancy);
+        if (ret == ESP_OK) {
+            if (occupancy.valid) {
+                cg_app_data_update_occupancy(&occupancy);
+            }
+            cg_app_data_clear_sensor_error(CG_SENSOR_STATUS_MLX90640);
+        } else {
+            cg_app_data_set_sensor_error(CG_SENSOR_STATUS_MLX90640, "occupancy_update", ret);
+        }
+
+        vTaskDelay(pdMS_TO_TICKS(CG_MLX90640_DEFAULT_PERIOD_MS));
+    }
+}
+
 esp_err_t cg_sensor_service_start(void)
 {
     BaseType_t env_ok = xTaskCreate(environment_sensor_task,
@@ -189,6 +241,12 @@ esp_err_t cg_sensor_service_start(void)
                                     NULL,
                                     SENSOR_TASK_PRIORITY,
                                     NULL);
+    BaseType_t mlx_ok = xTaskCreate(mlx90640_occupancy_task,
+                                    "mlx90640_occupancy",
+                                    MLX90640_TASK_STACK_SIZE,
+                                    NULL,
+                                    SENSOR_TASK_PRIORITY,
+                                    NULL);
 
-    return (env_ok == pdPASS && pms_ok == pdPASS) ? ESP_OK : ESP_ERR_NO_MEM;
+    return (env_ok == pdPASS && pms_ok == pdPASS && mlx_ok == pdPASS) ? ESP_OK : ESP_ERR_NO_MEM;
 }

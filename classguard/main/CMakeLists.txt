@@ -11,6 +11,7 @@ idf_component_register(
     REQUIRES
         common
         drivers
+        services
         esp_event
         esp_http_client
         esp_netif
