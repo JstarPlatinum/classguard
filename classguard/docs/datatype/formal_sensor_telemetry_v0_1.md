@@ -1,8 +1,8 @@
 # ClassGuard Formal Sensor Telemetry v0.1
 
 This document records the data names and types used by the formal SHT35,
-SCD41 and PMS5003 integration. Use these names when adding LED display,
-rules, storage or later MLX90640 processing code.
+SCD41, PMS5003 and MLX90640 occupancy integration. Use these names when
+adding LED display, rules, storage or later heatmap transfer code.
 
 共享数据接口：app_data.h (line 26)
 
@@ -30,6 +30,8 @@ Type:
 typedef struct {
     environment_frame_t environment;
     pm_frame_t pm;
+    thermal_frame_t thermal;
+    occupancy_frame_t occupancy;
     uint32_t sensor_error_mask;
     char error_message[192];
 } cg_app_sensor_snapshot_t;
@@ -74,6 +76,44 @@ Source type: `pm_frame_t` in `components/common/include/data_types.h`
 | `checksum_errors` | `uint32_t` | count | PMS5003 checksum errors since boot |
 | `valid` | `bool` | boolean | Whether PMS5003 fields are valid |
 
+## MLX90640 Thermal Data
+
+Source type: `thermal_frame_t` in `components/common/include/data_types.h`
+
+| Field | C type | Unit | Meaning |
+|---|---:|---|---|
+| `timestamp_ms` | `uint32_t` | ms | MLX90640 frame timestamp |
+| `pixels[768]` | `float[]` | deg C | Full 32x24 thermal frame kept in ESP32 shared memory |
+| `min_temp_c` | `float` | deg C | Minimum temperature in the current frame |
+| `max_temp_c` | `float` | deg C | Maximum temperature in the current frame |
+| `avg_temp_c` | `float` | deg C | Average temperature in the current frame |
+| `hotspot_index` | `uint16_t` | index | Hottest pixel index |
+| `valid` | `bool` | boolean | Whether MLX90640 thermal fields are valid |
+
+## MLX90640 Occupancy Data
+
+Source type: `occupancy_frame_t` in `components/common/include/data_types.h`
+
+| Field | C type | Unit | Meaning |
+|---|---:|---|---|
+| `timestamp_ms` | `uint32_t` | ms | Occupancy result timestamp |
+| `occupancy_ratio` | `float` | ratio | Valid human-like hot area ratio |
+| `occupancy_heat_score` | `float` | score | Heat intensity score |
+| `occupancy_score` | `float` | score | Combined occupancy score |
+| `background_temp` | `float` | deg C | Estimated background temperature |
+| `interference_threshold` | `float` | deg C | Interference filtering threshold |
+| `human_ref_temp` | `float` | deg C | Human reference temperature |
+| `final_threshold` | `float` | deg C | Final detection threshold |
+| `max_delta` | `float` | deg C | Maximum delta above background |
+| `candidate_count` | `uint16_t` | count | Candidate hot pixels before filtering |
+| `outlier_count` | `uint16_t` | count | Extreme outlier pixels |
+| `valid_pixels` | `uint16_t` | count | Valid human-like pixels |
+| `max_region_area` | `uint16_t` | count | Largest connected region area |
+| `bins[5]` | `uint16_t[]` | count | Delta temperature bins |
+| `state` | `cg_occupancy_state_t` | enum | 0 unoccupied, 1 possible, 2 occupied |
+| `occupied` | `bool` | boolean | Final occupied flag |
+| `valid` | `bool` | boolean | Whether occupancy fields are valid |
+
 ## Status Data
 
 | Field | C type | Meaning |
@@ -88,6 +128,7 @@ Error bits:
 | `CG_SENSOR_STATUS_SHT35` | `0x01` | SHT35 init/read error |
 | `CG_SENSOR_STATUS_SCD41` | `0x02` | SCD41 init/start/read error |
 | `CG_SENSOR_STATUS_PMS5003` | `0x04` | PMS5003 init/reset/read error |
+| `CG_SENSOR_STATUS_MLX90640` | `0x08` | MLX90640 init/read or occupancy error |
 
 ## HTTP Telemetry JSON
 
@@ -119,10 +160,17 @@ POST target: `/api/telemetry`
       "pm10": 18
     },
     "mlx90640": {
-      "frame_rate": 0.0,
       "temp_min_c": 24.0,
-      "temp_max_c": 24.0,
-      "temp_avg_c": 24.0
+      "temp_max_c": 32.5,
+      "temp_avg_c": 26.2,
+      "occupied": true,
+      "occupancy_ratio": 0.043,
+      "occupancy_heat_score": 0.020,
+      "occupancy_score": 0.038,
+      "state": 2,
+      "max_delta": 5.4,
+      "valid_pixels": 33,
+      "max_region_area": 18
     }
   },
   "status": {
@@ -134,5 +182,7 @@ POST target: `/api/telemetry`
 ```
 
 If a sensor has not produced valid data, its numeric fields are sent as `null`.
-MLX90640 is intentionally fixed in this version and is not driven together with
-SHT35, SCD41 and PMS5003.
+MLX90640 is now driven by `main/thermal_service.c`. This formal service updates
+both `thermal` and `occupancy` in the shared snapshot. It does not upload the
+full 32x24 heatmap yet; only thermal statistics and occupancy summary fields are
+included in `/api/telemetry`.

@@ -30,6 +30,14 @@ CREATE TABLE IF NOT EXISTS telemetry (
     mlx_temp_min_c REAL,
     mlx_temp_max_c REAL,
     mlx_temp_avg_c REAL,
+    mlx_occupied INTEGER,
+    mlx_occupancy_ratio REAL,
+    mlx_occupancy_heat_score REAL,
+    mlx_occupancy_score REAL,
+    mlx_occupancy_state INTEGER,
+    mlx_max_delta REAL,
+    mlx_valid_pixels INTEGER,
+    mlx_max_region_area INTEGER,
     sensor_ok INTEGER,
     error_code INTEGER,
     error_message TEXT,
@@ -41,6 +49,14 @@ CREATE TABLE IF NOT EXISTS telemetry (
 SCHEMA_MIGRATIONS = {
     "sht35_temperature_c": "ALTER TABLE telemetry ADD COLUMN sht35_temperature_c REAL",
     "sht35_humidity_percent": "ALTER TABLE telemetry ADD COLUMN sht35_humidity_percent REAL",
+    "mlx_occupied": "ALTER TABLE telemetry ADD COLUMN mlx_occupied INTEGER",
+    "mlx_occupancy_ratio": "ALTER TABLE telemetry ADD COLUMN mlx_occupancy_ratio REAL",
+    "mlx_occupancy_heat_score": "ALTER TABLE telemetry ADD COLUMN mlx_occupancy_heat_score REAL",
+    "mlx_occupancy_score": "ALTER TABLE telemetry ADD COLUMN mlx_occupancy_score REAL",
+    "mlx_occupancy_state": "ALTER TABLE telemetry ADD COLUMN mlx_occupancy_state INTEGER",
+    "mlx_max_delta": "ALTER TABLE telemetry ADD COLUMN mlx_max_delta REAL",
+    "mlx_valid_pixels": "ALTER TABLE telemetry ADD COLUMN mlx_valid_pixels INTEGER",
+    "mlx_max_region_area": "ALTER TABLE telemetry ADD COLUMN mlx_max_region_area INTEGER",
 }
 
 
@@ -121,6 +137,7 @@ def _row_to_dict(row: sqlite3.Row) -> Dict[str, Any]:
     except (TypeError, json.JSONDecodeError):
         data["raw"] = None
     data["sensor_ok"] = bool(data["sensor_ok"]) if data["sensor_ok"] is not None else None
+    data["mlx_occupied"] = bool(data["mlx_occupied"]) if data.get("mlx_occupied") is not None else None
     return data
 
 
@@ -150,6 +167,14 @@ def _extract(payload: TelemetryIn) -> Dict[str, Any]:
         "mlx_temp_min_c": mlx90640.temp_min_c if mlx90640 else None,
         "mlx_temp_max_c": mlx90640.temp_max_c if mlx90640 else None,
         "mlx_temp_avg_c": mlx90640.temp_avg_c if mlx90640 else None,
+        "mlx_occupied": 1 if (mlx90640 and mlx90640.occupied is True) else 0 if (mlx90640 and mlx90640.occupied is False) else None,
+        "mlx_occupancy_ratio": mlx90640.occupancy_ratio if mlx90640 else None,
+        "mlx_occupancy_heat_score": mlx90640.occupancy_heat_score if mlx90640 else None,
+        "mlx_occupancy_score": mlx90640.occupancy_score if mlx90640 else None,
+        "mlx_occupancy_state": mlx90640.state if mlx90640 else None,
+        "mlx_max_delta": mlx90640.max_delta if mlx90640 else None,
+        "mlx_valid_pixels": mlx90640.valid_pixels if mlx90640 else None,
+        "mlx_max_region_area": mlx90640.max_region_area if mlx90640 else None,
         "sensor_ok": 1 if (status is None or status.sensor_ok) else 0,
         "error_code": status.error_code if status else 0,
         "error_message": status.error_message if status else "",
@@ -181,6 +206,9 @@ async def insert_telemetry(payload: TelemetryIn, received_at: datetime) -> Dict[
                 sht35_temperature_c, sht35_humidity_percent,
                 pm1_0, pm2_5, pm10,
                 mlx_temp_min_c, mlx_temp_max_c, mlx_temp_avg_c,
+                mlx_occupied, mlx_occupancy_ratio, mlx_occupancy_heat_score,
+                mlx_occupancy_score, mlx_occupancy_state, mlx_max_delta,
+                mlx_valid_pixels, mlx_max_region_area,
                 sensor_ok, error_code, error_message, raw_json
             )
             VALUES (
@@ -189,6 +217,9 @@ async def insert_telemetry(payload: TelemetryIn, received_at: datetime) -> Dict[
                 :sht35_temperature_c, :sht35_humidity_percent,
                 :pm1_0, :pm2_5, :pm10,
                 :mlx_temp_min_c, :mlx_temp_max_c, :mlx_temp_avg_c,
+                :mlx_occupied, :mlx_occupancy_ratio, :mlx_occupancy_heat_score,
+                :mlx_occupancy_score, :mlx_occupancy_state, :mlx_max_delta,
+                :mlx_valid_pixels, :mlx_max_region_area,
                 :sensor_ok, :error_code, :error_message, :raw_json
             )
             """,

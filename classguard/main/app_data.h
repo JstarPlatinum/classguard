@@ -19,6 +19,7 @@ extern "C" {
 typedef struct {
     environment_frame_t environment;
     pm_frame_t pm;
+    thermal_frame_t thermal;
     occupancy_frame_t occupancy;
     uint32_t sensor_error_mask;
     char error_message[CG_APP_STATUS_MESSAGE_MAX_LEN];
@@ -30,6 +31,7 @@ bool cg_app_data_get_latest(cg_app_sensor_snapshot_t *out_snapshot);
 void cg_app_data_update_sht35(const environment_frame_t *frame);
 void cg_app_data_update_scd41(const environment_frame_t *frame);
 void cg_app_data_update_pms5003(const pm_frame_t *frame);
+void cg_app_data_update_thermal(const thermal_frame_t *frame);
 void cg_app_data_update_occupancy(const occupancy_frame_t *frame);
 
 void cg_app_data_set_sensor_error(uint32_t sensor_bit, const char *sensor_name, esp_err_t error);
