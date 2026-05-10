@@ -11,7 +11,7 @@
 
 static const char *TAG = "cg_mlx90640";
 
-#define MLX90640_REFRESH_RATE_1HZ 0x01U
+#define MLX90640_REFRESH_RATE_2HZ 0x02U
 #define MLX90640_FRAME_SUBPAGES 2U
 #define MLX90640_EMISSIVITY_DEFAULT 0.95f
 
@@ -115,7 +115,7 @@ esp_err_t cg_mlx90640_init(cg_mlx90640_t *dev, i2c_port_t port)
     }
     dev->params_valid = true;
 
-    api_ret = MLX90640_SetRefreshRate(dev->address, MLX90640_REFRESH_RATE_1HZ);
+    api_ret = MLX90640_SetRefreshRate(dev->address, MLX90640_REFRESH_RATE_2HZ);
     if (api_ret != MLX90640_NO_ERROR) {
         return ESP_FAIL;
     }

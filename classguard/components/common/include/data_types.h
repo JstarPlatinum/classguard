@@ -41,9 +41,16 @@ typedef enum {
 typedef struct {
     uint32_t timestamp_ms;
     float occupancy_ratio;
+    float occupancy_heat_score;
     float occupancy_score;
     float threshold;
+    float background_temp;
+    float interference_threshold;
+    float human_ref_temp;
+    float final_threshold;
     float max_delta;
+    uint16_t candidate_count;
+    uint16_t outlier_count;
     uint16_t valid_pixels;
     uint16_t max_region_area;
     uint16_t bins[5];

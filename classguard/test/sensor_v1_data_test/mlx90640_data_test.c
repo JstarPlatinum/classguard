@@ -261,12 +261,18 @@ void mlx90640_data_test_run(void)
                    frame.avg_temp_c,
                    frame.hotspot_index);
             if (occ_ret == ESP_OK && occupancy.valid) {
-                printf("MLX90640 occupancy: state=%s occupied=%d ratio=%.4f score=%.4f threshold=%.2f max_delta=%.2f pixels=%u region=%u\r\n",
+                printf("MLX90640 occupancy: state=%s occupied=%d ratio=%.4f heat=%.4f score=%.4f BG=%.2f INT=%.2f CAND=%u OUT=%u HREF=%.2f TH=%.2f max_delta=%.2f pixels=%u region=%u\r\n",
                        occupancy_state_name(occupancy.state),
                        occupancy.occupied ? 1 : 0,
                        occupancy.occupancy_ratio,
+                       occupancy.occupancy_heat_score,
                        occupancy.occupancy_score,
-                       occupancy.threshold,
+                       occupancy.background_temp,
+                       occupancy.interference_threshold,
+                       occupancy.candidate_count,
+                       occupancy.outlier_count,
+                       occupancy.human_ref_temp,
+                       occupancy.final_threshold,
                        occupancy.max_delta,
                        occupancy.valid_pixels,
                        occupancy.max_region_area);
