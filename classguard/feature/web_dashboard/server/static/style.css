@@ -95,6 +95,49 @@ body {
   background: var(--surface);
 }
 
+.evaluation-strip {
+  display: grid;
+  grid-template-columns: 150px 130px 170px minmax(0, 1fr);
+  gap: 1px;
+  overflow: hidden;
+  margin-bottom: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--line);
+}
+
+.evaluation-strip div {
+  min-width: 0;
+  padding: 14px;
+  background: var(--surface);
+}
+
+.evaluation-strip span {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.evaluation-strip strong {
+  display: block;
+  overflow: hidden;
+  margin-top: 6px;
+  font-size: 16px;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.evaluation-score strong {
+  color: var(--blue);
+  font-size: 30px;
+  line-height: 1;
+}
+
+.evaluation-message strong {
+  white-space: normal;
+}
+
 .device-strip span,
 .metric-card span,
 .panel-title span {
@@ -218,6 +261,10 @@ body {
   .device-strip {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
+
+  .evaluation-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 760px) {
@@ -235,6 +282,7 @@ body {
   }
 
   .device-strip,
+  .evaluation-strip,
   .content-grid {
     grid-template-columns: 1fr;
   }
