@@ -6,10 +6,10 @@
  * SERVER_URL must use the PC WLAN IPv4 address, not 127.0.0.1.
  * Example: http://192.168.0.67:8000/api/telemetry
  */
-#define WIFI_UPLOAD_SSID "dzg130"
-#define WIFI_UPLOAD_PASSWORD "libs0126"
+#define WIFI_UPLOAD_SSID "your SSID"
+#define WIFI_UPLOAD_PASSWORD "Your Password"
 
-#define WIFI_UPLOAD_SERVER_URL "http://192.168.0.67:8000/api/telemetry"
+#define WIFI_UPLOAD_SERVER_URL "http://192.168.0.67:8000/api/telemetry" //your ip
 #define WIFI_UPLOAD_DEVICE_ID "esp32s3_node_001"
 #define WIFI_UPLOAD_DEVICE_TOKEN "classguard_test_token_001"
 
