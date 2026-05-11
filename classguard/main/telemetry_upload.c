@@ -357,8 +357,8 @@ static void upload_task(void *arg)
 
 esp_err_t cg_telemetry_upload_start(void)
 {
-    esp_log_level_set("wifi", ESP_LOG_WARN);
-    esp_log_level_set("esp_http_client", ESP_LOG_WARN);
+    esp_log_level_set("wifi", ESP_LOG_NONE);
+    esp_log_level_set("esp_http_client", ESP_LOG_NONE);
 
     esp_err_t ret = wifi_init_sta();
     if (ret != ESP_OK) {
