@@ -67,6 +67,13 @@ extern "C" {
 #define CG_HUB75_HEIGHT 32U
 #define CG_HUB75_DEFAULT_BRIGHTNESS 64U
 
+/*
+ * Set to 1 while debugging display code with deterministic sensor data.
+ * When enabled, app_main() writes fixed data with the same real sensor structs
+ * into app_data, so display code can still call cg_app_data_get_latest().
+ */
+#define CG_USE_FIXED_SENSOR_DATA 1
+
 #ifdef __cplusplus
 }
 #endif

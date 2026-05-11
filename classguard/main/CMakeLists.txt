@@ -3,6 +3,7 @@ idf_component_register(
         "main.c"
         "air_quality_evaluator.c"
         "app_data.c"
+        "fixed_sensor_data.c"
         "sensor_service.c"
         "thermal_service.c"
         "telemetry_upload.c"

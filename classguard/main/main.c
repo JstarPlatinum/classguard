@@ -1,5 +1,7 @@
 #include "app_data.h"
+#include "app_config.h"
 #include "esp_err.h"
+#include "fixed_sensor_data.h"
 #include "nvs_flash.h"
 #include "sensor_service.h"
 #include "telemetry_upload.h"
@@ -16,7 +18,11 @@ void app_main(void)
     ESP_ERROR_CHECK(ret);
 
     cg_app_data_init();
+#if CG_USE_FIXED_SENSOR_DATA
+    cg_fixed_sensor_data_load_to_app_data();
+#else
     ESP_ERROR_CHECK(cg_sensor_service_start());
     ESP_ERROR_CHECK(cg_thermal_service_start());
+#endif
     ESP_ERROR_CHECK(cg_telemetry_upload_start());
 }
