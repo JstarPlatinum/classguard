@@ -59,7 +59,7 @@ function actionLabel(action) {
     purify_air: "空气净化",
     cooling: "降温",
     dehumidify: "除湿",
-    improve_by_reason: "按异常处理",
+    improve_by_reason: "建议通风",
     no_data: "等待数据",
   };
   return labels[action] || action || "--";
