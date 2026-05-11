@@ -2,7 +2,9 @@
 
 #include <stdbool.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+#include "air_quality_evaluator.h"
 #include "app_data.h"
 #include "esp_err.h"
 #include "esp_event.h"
@@ -17,10 +19,11 @@
 
 #define WIFI_CONNECTED_BIT BIT0
 #define WIFI_FAIL_BIT BIT1
-#define UPLOAD_TASK_STACK_SIZE 8192U
+#define UPLOAD_TASK_STACK_SIZE 12288U
 #define UPLOAD_TASK_PRIORITY 5U
-#define TELEMETRY_BODY_SIZE 1792U
+#define TELEMETRY_BODY_SIZE 3072U
 #define VALUE_TEXT_SIZE 24U
+#define JSON_ARRAY_TEXT_SIZE 256U
 
 static const char *TAG = "cg_upload";
 static EventGroupHandle_t s_wifi_event_group;
@@ -137,6 +140,42 @@ static void format_float_or_null(char *dst, size_t dst_len, bool valid, float va
     }
 }
 
+static void format_string_array(char *dst,
+                                size_t dst_len,
+                                const char items[][CG_AQ_LABEL_LEN],
+                                size_t count)
+{
+    size_t used = 0U;
+    if (dst_len == 0U) {
+        return;
+    }
+
+    dst[0] = '\0';
+    int written = snprintf(dst, dst_len, "[");
+    if (written < 0) {
+        return;
+    }
+    used = (size_t)written;
+
+    for (size_t i = 0; i < count && used < dst_len; ++i) {
+        written = snprintf(dst + used,
+                           dst_len - used,
+                           "%s\"%s\"",
+                           (i > 0U) ? "," : "",
+                           items[i]);
+        if (written < 0) {
+            return;
+        }
+        used += (size_t)written;
+    }
+
+    if (used < dst_len) {
+        (void)snprintf(dst + used, dst_len - used, "]");
+    } else {
+        dst[dst_len - 1U] = '\0';
+    }
+}
+
 static esp_err_t build_telemetry_json(char *body, size_t body_size, const cg_app_sensor_snapshot_t *snapshot)
 {
     char ip_addr[16];
@@ -155,6 +194,8 @@ static esp_err_t build_telemetry_json(char *body, size_t body_size, const cg_app
     char occupancy_heat_score[VALUE_TEXT_SIZE];
     char occupancy_score[VALUE_TEXT_SIZE];
     char occupancy_max_delta[VALUE_TEXT_SIZE];
+    char aq_redlines[JSON_ARRAY_TEXT_SIZE];
+    char aq_reasons[JSON_ARRAY_TEXT_SIZE];
 
     bool scd41_valid = snapshot->environment.scd41_valid;
     bool sht35_valid = snapshot->environment.sht35_valid;
@@ -183,6 +224,14 @@ static esp_err_t build_telemetry_json(char *body, size_t body_size, const cg_app
     format_float_or_null(occupancy_score, sizeof(occupancy_score), occupancy_valid, snapshot->occupancy.occupancy_score, 4);
     format_float_or_null(occupancy_max_delta, sizeof(occupancy_max_delta), occupancy_valid, snapshot->occupancy.max_delta, 2);
 
+    cg_air_quality_input_t aq_input;
+    cg_air_quality_result_t aq_result;
+    cg_air_quality_input_from_frames(&snapshot->environment, &snapshot->pm, &snapshot->occupancy, &aq_input);
+    cg_air_quality_evaluate(&aq_input, &aq_result);
+
+    format_string_array(aq_redlines, sizeof(aq_redlines), aq_result.redlines, aq_result.redline_count);
+    format_string_array(aq_reasons, sizeof(aq_reasons), aq_result.main_reasons, aq_result.main_reason_count);
+
     uint32_t uptime_ms = (uint32_t)(xTaskGetTickCount() * portTICK_PERIOD_MS);
     bool sensor_ok = snapshot->sensor_error_mask == 0;
 
@@ -204,6 +253,10 @@ static esp_err_t build_telemetry_json(char *body, size_t body_size, const cg_app
         "\"occupied\":%s,\"occupancy_ratio\":%s,\"occupancy_heat_score\":%s,\"occupancy_score\":%s,"
         "\"state\":%d,\"max_delta\":%s,\"valid_pixels\":%u,\"max_region_area\":%u"
         "}"
+        "},"
+        "\"air_quality\":{"
+        "\"weighted_score\":%.1f,\"score\":%.1f,\"level_code\":\"%s\","
+        "\"action\":\"%s\",\"redlines\":%s,\"main_reasons\":%s"
         "},"
         "\"status\":{\"sensor_ok\":%s,\"error_code\":%lu,\"error_message\":\"%s\"}"
         "}",
@@ -230,6 +283,12 @@ static esp_err_t build_telemetry_json(char *body, size_t body_size, const cg_app
         occupancy_max_delta,
         occupancy_valid ? (unsigned int)snapshot->occupancy.valid_pixels : 0U,
         occupancy_valid ? (unsigned int)snapshot->occupancy.max_region_area : 0U,
+        (double)aq_result.weighted_score,
+        (double)aq_result.display_score,
+        aq_result.level,
+        aq_result.action,
+        aq_redlines,
+        aq_reasons,
         sensor_ok ? "true" : "false",
         (unsigned long)snapshot->sensor_error_mask,
         snapshot->error_message);
@@ -239,9 +298,14 @@ static esp_err_t build_telemetry_json(char *body, size_t body_size, const cg_app
 
 static esp_err_t post_telemetry(const cg_app_sensor_snapshot_t *snapshot)
 {
-    char body[TELEMETRY_BODY_SIZE];
-    esp_err_t ret = build_telemetry_json(body, sizeof(body), snapshot);
+    char *body = (char *)calloc(1U, TELEMETRY_BODY_SIZE);
+    if (body == NULL) {
+        return ESP_ERR_NO_MEM;
+    }
+
+    esp_err_t ret = build_telemetry_json(body, TELEMETRY_BODY_SIZE, snapshot);
     if (ret != ESP_OK) {
+        free(body);
         return ret;
     }
 
@@ -253,6 +317,7 @@ static esp_err_t post_telemetry(const cg_app_sensor_snapshot_t *snapshot)
 
     esp_http_client_handle_t client = esp_http_client_init(&config);
     if (client == NULL) {
+        free(body);
         return ESP_FAIL;
     }
 
@@ -266,6 +331,7 @@ static esp_err_t post_telemetry(const cg_app_sensor_snapshot_t *snapshot)
     }
 
     esp_http_client_cleanup(client);
+    free(body);
     return ret;
 }
 
@@ -276,7 +342,7 @@ static void upload_task(void *arg)
     for (;;) {
         EventBits_t bits = xEventGroupGetBits(s_wifi_event_group);
         if ((bits & WIFI_CONNECTED_BIT) != 0) {
-            cg_app_sensor_snapshot_t snapshot;
+            static cg_app_sensor_snapshot_t snapshot;
             if (cg_app_data_get_latest(&snapshot)) {
                 esp_err_t ret = post_telemetry(&snapshot);
                 if (ret != ESP_OK) {

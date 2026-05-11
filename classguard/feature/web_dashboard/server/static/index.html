@@ -40,6 +40,25 @@
         </div>
       </section>
 
+      <section class="evaluation-strip" aria-label="综合空气质量评价">
+        <div class="evaluation-score">
+          <span>综合评分</span>
+          <strong id="aqScore">--</strong>
+        </div>
+        <div>
+          <span>等级</span>
+          <strong id="aqLevel">--</strong>
+        </div>
+        <div>
+          <span>建议动作</span>
+          <strong id="aqAction">--</strong>
+        </div>
+        <div class="evaluation-message">
+          <span>建议</span>
+          <strong id="aqMessage">--</strong>
+        </div>
+      </section>
+
       <section class="metric-grid" aria-label="实时参数">
         <article class="metric-card">
           <span>CO2</span>
@@ -87,7 +106,7 @@
         <div class="chart-panel">
           <div class="panel-title">
             <h2>空气质量</h2>
-            <span>CO2 / PM2.5</span>
+            <span>综合评分 / CO2 / PM2.5</span>
           </div>
           <div class="chart" id="airChart"></div>
         </div>

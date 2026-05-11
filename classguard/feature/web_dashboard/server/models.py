@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import List, Optional
 
 from pydantic import BaseModel, Field
 
@@ -53,6 +53,29 @@ class DeviceStatus(BaseModel):
     error_message: str = ""
 
 
+class AirQualityMetricValues(BaseModel):
+    co2: Optional[float] = None
+    pm1_0: Optional[float] = None
+    pm2_5: Optional[float] = None
+    pm10: Optional[float] = None
+    temperature: Optional[float] = None
+    humidity: Optional[float] = None
+    occupancy: Optional[float] = None
+
+
+class AirQualityData(BaseModel):
+    weighted_score: Optional[float] = Field(default=None, ge=0, le=100)
+    score: Optional[float] = Field(default=None, ge=0, le=100)
+    level_code: Optional[str] = None
+    level: Optional[str] = None
+    message: Optional[str] = None
+    action: Optional[str] = None
+    redlines: List[str] = Field(default_factory=list)
+    main_reasons: List[str] = Field(default_factory=list)
+    scores: Optional[AirQualityMetricValues] = None
+    weights: Optional[AirQualityMetricValues] = None
+
+
 class TelemetryIn(BaseModel):
     device_id: str
     firmware: Optional[str] = None
@@ -60,4 +83,5 @@ class TelemetryIn(BaseModel):
     uptime_ms: Optional[int] = Field(default=None, ge=0)
     wifi: Optional[WifiInfo] = None
     sensors: Optional[SensorGroup] = None
+    air_quality: Optional[AirQualityData] = None
     status: Optional[DeviceStatus] = None

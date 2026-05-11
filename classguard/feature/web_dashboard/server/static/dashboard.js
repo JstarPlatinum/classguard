@@ -16,6 +16,10 @@ const fields = {
   lastSeen: document.getElementById("lastSeen"),
   onlineState: document.getElementById("onlineState"),
   connectionText: document.getElementById("connectionText"),
+  aqScore: document.getElementById("aqScore"),
+  aqLevel: document.getElementById("aqLevel"),
+  aqAction: document.getElementById("aqAction"),
+  aqMessage: document.getElementById("aqMessage"),
   co2: document.getElementById("co2"),
   temperature: document.getElementById("temperature"),
   humidity: document.getElementById("humidity"),
@@ -44,6 +48,21 @@ function fmtTime(value) {
 
 function setText(el, value) {
   el.textContent = value ?? "--";
+}
+
+function actionLabel(action) {
+  const labels = {
+    keep_monitoring: "保持监测",
+    ventilation: "加强通风",
+    early_ventilation: "提前通风",
+    filtered_ventilation: "过滤新风",
+    purify_air: "空气净化",
+    cooling: "降温",
+    dehumidify: "除湿",
+    improve_by_reason: "建议通风",
+    no_data: "等待数据",
+  };
+  return labels[action] || action || "--";
 }
 
 function relabelThermalCards() {
@@ -104,6 +123,10 @@ function renderLatest(item) {
   setText(fields.wifiRssi, item.wifi_rssi === null ? "--" : `${item.wifi_rssi} dBm`);
   setText(fields.deviceIp, item.wifi_ip);
   setText(fields.lastSeen, fmtTime(item.received_at));
+  setText(fields.aqScore, fmt(item.aq_score, 0));
+  setText(fields.aqLevel, item.aq_level);
+  setText(fields.aqAction, actionLabel(item.aq_action));
+  setText(fields.aqMessage, item.aq_message);
   setText(fields.co2, fmt(item.co2_ppm, 0));
   const displayTemperature = item.sht35_temperature_c ?? item.temperature_c;
   const displayHumidity = item.sht35_humidity_percent ?? item.humidity_percent;
@@ -180,9 +203,10 @@ function renderCharts() {
 
   state.charts.air.setOption(
     chartOption([
+      buildSeries("综合评分", "aq_score", "#138a5b"),
       buildSeries("CO2", "co2_ppm", "#2563eb"),
       buildSeries("PM2.5", "pm2_5", "#b7791f"),
-    ], "ppm / ug/m3")
+    ], "score / ppm / ug/m3")
   );
   state.charts.env.setOption(
     chartOption([
@@ -221,10 +245,18 @@ function renderAlerts() {
     if (item.sensor_ok === false) {
       alerts.push({ level: "error", text: item.error_message || "传感器状态异常" });
     }
-    if (Number(item.co2_ppm) > 1000) {
+    if (Array.isArray(item.aq_redlines) && item.aq_redlines.length > 0) {
+      item.aq_redlines.forEach((redline) => {
+        alerts.push({ level: "error", text: `综合评价红线：${redline}` });
+      });
+    }
+    if (item.aq_message) {
+      alerts.push({ level: item.aq_score !== null && item.aq_score < 55 ? "warn" : "", text: item.aq_message });
+    }
+    if (!item.aq_message && Number(item.co2_ppm) > 1000) {
       alerts.push({ level: "warn", text: `CO2 偏高：${fmt(item.co2_ppm, 0)} ppm` });
     }
-    if (Number(item.pm2_5) > 35) {
+    if (!item.aq_message && Number(item.pm2_5) > 35) {
       alerts.push({ level: "warn", text: `PM2.5 偏高：${fmt(item.pm2_5, 0)} ug/m3` });
     }
     if (alerts.length === 0) {

@@ -1,6 +1,7 @@
 idf_component_register(
     SRCS
         "main.c"
+        "air_quality_evaluator.c"
         "app_data.c"
         "sensor_service.c"
         "thermal_service.c"
